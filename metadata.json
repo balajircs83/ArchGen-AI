@@ -1,0 +1,5 @@
+{
+  "name": "ArchGen AI",
+  "description": "An interactive AI-powered system architecture generator that visualizes data flow and component relationships based on user prompts.",
+  "requestFramePermissions": []
+}
