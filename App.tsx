@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Sparkles, Send, Layout, Info as InfoIcon, Loader2, History, LogOut, User as UserIcon, MessageSquare, Download, ChevronDown, Image as ImageIcon, FileImage, FileType, FileVideo } from 'lucide-react';
+import { Sparkles, Send, Home, Info as InfoIcon, Loader2, History, LogOut, User as UserIcon, MessageSquare, Download, ChevronDown, Image as ImageIcon, FileImage, FileType, FileVideo, Server, Globe, Shield } from 'lucide-react';
 import { toPng, toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import gifshot from 'gifshot';
@@ -104,32 +104,37 @@ function App() {
     setIsInfoPanelOpen(false);
     setIsChatOpen(false);
   };
-
-  const handleGenerate = async (e: React.FormEvent) => {
+  const handleGenerateBase = async (e: React.FormEvent, directPrompt?: string) => {
     e.preventDefault();
-    if (!prompt.trim() || !user) return;
+    const activePrompt = directPrompt || prompt;
+    if (!activePrompt.trim() || !user) return;
 
     setIsLoading(true);
     setError(null);
     setData(null);
     setCurrentId(undefined);
     setSelectedNode(null);
-    setChatMessages([]); // Reset chat for new architecture
+    setChatMessages([]);
 
     try {
-      // 1. Generate via AI
-      const result = await generateArchitecture(prompt);
-
-      // 2. Update UI (Don't save to DB automatically yet)
+      const result = await generateArchitecture(activePrompt);
       setData(result);
-      setIsInfoPanelOpen(true); // Open explanation by default on new generation
-      setPrompt(''); // Clear text box after success
+      setIsInfoPanelOpen(true);
+      setPrompt('');
     } catch (err) {
       setError("Failed to generate architecture. Please try again with a more specific prompt.");
       console.error(err);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleExampleClick = (examplePrompt: string) => {
+    setPrompt(examplePrompt);
+    setTimeout(() => {
+      const fakeEvent = { preventDefault: () => { } } as React.FormEvent;
+      handleGenerateBase(fakeEvent, examplePrompt);
+    }, 0);
   };
 
   const handleGoHome = () => {
@@ -384,7 +389,7 @@ function App() {
               className="bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-2xl p-2 px-4 shadow-xl flex items-center gap-2 pointer-events-auto hover:bg-gray-800 transition-all cursor-pointer"
             >
               <div className="p-2 bg-blue-600 rounded-lg">
-                <Layout className="w-5 h-5 text-white" />
+                <Home className="w-5 h-5 text-white" />
               </div>
               <div className="text-left">
                 <h1 className="font-bold text-white leading-tight">ArchGen AI</h1>
@@ -479,10 +484,39 @@ function App() {
                 <p className="text-gray-400 max-w-lg text-lg mb-8 animate-fadeIn delay-100">
                   Describe your application, and our AI will engineer a complete, interactive system architecture diagram for you.
                 </p>
-                <div className="flex gap-3 text-sm text-gray-500 animate-fadeIn delay-200">
-                  <span className="px-3 py-1 bg-gray-800 rounded-full border border-gray-700">Microservices</span>
-                  <span className="px-3 py-1 bg-gray-800 rounded-full border border-gray-700">Event-Driven</span>
-                  <span className="px-3 py-1 bg-gray-800 rounded-full border border-gray-700">Scalable</span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl w-full animate-fadeIn delay-200">
+                  <button
+                    onClick={() => handleExampleClick("A scalable e-commerce platform with real-time inventory and AI recommendations")}
+                    className="p-6 bg-gray-800/40 hover:bg-gray-800/80 border border-gray-700/50 rounded-2xl text-left transition-all hover:scale-[1.02] active:scale-95 group"
+                  >
+                    <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-500/40 transition-colors">
+                      <Globe className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <h3 className="text-white font-bold mb-2">E-Commerce Flow</h3>
+                    <p className="text-sm text-gray-400">High-traffic web app with inventory sync</p>
+                  </button>
+
+                  <button
+                    onClick={() => handleExampleClick("Microservices architecture for a banking app with event-driven transactions")}
+                    className="p-6 bg-gray-800/40 hover:bg-gray-800/80 border border-gray-700/50 rounded-2xl text-left transition-all hover:scale-[1.02] active:scale-95 group"
+                  >
+                    <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-purple-500/40 transition-colors">
+                      <Server className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <h3 className="text-white font-bold mb-2">FinTech Core</h3>
+                    <p className="text-sm text-gray-400">Event-driven banking with microservices</p>
+                  </button>
+
+                  <button
+                    onClick={() => handleExampleClick("Secure IoT data pipeline using serverless functions and real-time streaming")}
+                    className="p-6 bg-gray-800/40 hover:bg-gray-800/80 border border-gray-700/50 rounded-2xl text-left transition-all hover:scale-[1.02] active:scale-95 group"
+                  >
+                    <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-green-500/40 transition-colors">
+                      <Shield className="w-5 h-5 text-green-400" />
+                    </div>
+                    <h3 className="text-white font-bold mb-2">IoT Data Pipeline</h3>
+                    <p className="text-sm text-gray-400">Secure, serverless streaming for IoT devies</p>
+                  </button>
                 </div>
               </>
             )}
@@ -508,7 +542,7 @@ function App() {
             </div>
           )}
 
-          <form onSubmit={handleGenerate} className="relative group">
+          <form onSubmit={(e) => handleGenerateBase(e)} className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl opacity-75 group-hover:opacity-100 blur transition duration-500"></div>
             <div className="relative flex items-center bg-gray-900 rounded-2xl p-1.5 shadow-2xl gap-2">
               <input

@@ -43,19 +43,21 @@ const ArchitectureDiagram: React.FC<ArchitectureDiagramProps> = ({ data, onNodeC
       position: { x: 0, y: 0 }, // Initial position, will be fixed by layout
     }));
 
-    const initialEdges: Edge[] = data.edges.map((e) => ({
+    const initialEdges: Edge[] = data.edges.map((e, index) => ({
       id: e.id,
       source: e.source,
       target: e.target,
-      label: e.label,
+      label: e.label ? `${index + 1}. ${e.label}` : `${index + 1}`,
       animated: true, // Key for data flow visualization
       style: {
         stroke: '#60a5fa',
         strokeWidth: 2,
         strokeDasharray: '6', // Explicitly define dasharray to ensure it's captured
       },
-      labelStyle: { fill: '#e5e7eb', fontWeight: 500 },
-      labelBgStyle: { fill: '#1f2937', fillOpacity: 0.8 },
+      labelStyle: { fill: '#60a5fa', fontWeight: 700, fontSize: 10 },
+      labelBgStyle: { fill: '#111827', fillOpacity: 0.9 },
+      labelBgPadding: [8, 4],
+      labelBgBorderRadius: 4,
       markerEnd: {
         type: MarkerType.ArrowClosed,
         color: '#60a5fa',
