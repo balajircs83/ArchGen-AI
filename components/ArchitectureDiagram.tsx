@@ -49,7 +49,11 @@ const ArchitectureDiagram: React.FC<ArchitectureDiagramProps> = ({ data, onNodeC
       target: e.target,
       label: e.label,
       animated: true, // Key for data flow visualization
-      style: { stroke: '#60a5fa', strokeWidth: 2 },
+      style: {
+        stroke: '#60a5fa',
+        strokeWidth: 2,
+        strokeDasharray: '6', // Explicitly define dasharray to ensure it's captured
+      },
       labelStyle: { fill: '#e5e7eb', fontWeight: 500 },
       labelBgStyle: { fill: '#1f2937', fillOpacity: 0.8 },
       markerEnd: {
@@ -77,7 +81,7 @@ const ArchitectureDiagram: React.FC<ArchitectureDiagramProps> = ({ data, onNodeC
   const bgColor = '#111827'; // gray-900
 
   return (
-    <div className="w-full h-full text-black">
+    <div className="w-full h-full text-black relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -92,18 +96,22 @@ const ArchitectureDiagram: React.FC<ArchitectureDiagramProps> = ({ data, onNodeC
         maxZoom={1.5}
       >
         <Background color="#374151" gap={20} size={1} />
-        <Controls className="!bg-gray-800 !border-gray-700 !text-white [&>button]:!fill-white" />
-        <MiniMap 
-            nodeColor={(n) => {
-                switch(n.data.type) {
-                    case 'database': return '#22c55e';
-                    case 'service': return '#3b82f6';
-                    case 'client': return '#a855f7';
-                    default: return '#6b7280';
-                }
-            }}
-            className="!bg-gray-800 border border-gray-700 rounded-lg overflow-hidden" 
-            maskColor="rgba(0, 0, 0, 0.4)"
+        <Controls
+          className="!flex !flex-col !gap-1 !p-1 !bg-gray-900/40 !backdrop-blur-xl !border !border-white/10 !rounded-2xl !shadow-2xl [&>button]:!bg-white/5 [&>button]:!border-none [&>button]:!rounded-xl [&>button]:!w-10 [&>button]:!h-10 [&>button:hover]:!bg-blue-600/50 [&>button]:!transition-all [&>button>svg]:!fill-white/80 [&>button]:!flex [&>button]:!items-center [&>button]:!justify-center"
+          showInteractive={false}
+          position="bottom-left"
+        />
+        <MiniMap
+          nodeColor={(n) => {
+            switch (n.data.type) {
+              case 'database': return '#22c55e';
+              case 'service': return '#3b82f6';
+              case 'client': return '#a855f7';
+              default: return '#6b7280';
+            }
+          }}
+          className="!bg-gray-800 border border-gray-700 rounded-lg overflow-hidden"
+          maskColor="rgba(0, 0, 0, 0.4)"
         />
       </ReactFlow>
     </div>
