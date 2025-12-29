@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, MessageSquare, Bot, User } from 'lucide-react';
 import { ChatMessage } from '../types';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface ChatPanelProps {
   isOpen: boolean;
@@ -11,17 +13,50 @@ interface ChatPanelProps {
   hasArchitecture: boolean;
 }
 
-const ChatPanel: React.FC<ChatPanelProps> = ({ 
-  isOpen, 
-  onClose, 
-  messages, 
-  onSendMessage, 
+const ChatPanel: React.FC<ChatPanelProps> = ({
+  isOpen,
+  onClose,
+  messages,
+  onSendMessage,
   isTyping,
   hasArchitecture
 }) => {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [width, setWidth] = useState(350);
+  const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+
+      const newWidth = Math.max(280, Math.min(window.innerWidth * 0.8, e.clientX));
+      setWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = 'default';
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -40,18 +75,26 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isTyping) return;
-    
+
     const message = input;
     setInput('');
     await onSendMessage(message);
   };
 
   return (
-    <div 
-      className={`fixed left-0 top-0 h-full w-full md:w-[350px] bg-gray-900/95 backdrop-blur-xl border-r border-gray-700 shadow-2xl z-50 transform transition-transform duration-300 flex flex-col ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}
+    <div
+      className={`fixed left-0 top-0 h-full bg-gray-900/95 backdrop-blur-xl border-r border-gray-700 shadow-2xl z-50 transform transition-transform duration-300 flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      style={{
+        width: window.innerWidth < 768 ? '100%' : `${width}px`,
+        transition: isResizing ? 'none' : 'transform 0.3s ease-in-out'
+      }}
     >
+      {/* Resize Handle */}
+      <div
+        onMouseDown={startResizing}
+        className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500/50 transition-colors z-[60] hidden md:block"
+      />
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-gray-700 bg-gray-900/50">
         <div className="flex items-center gap-2">
@@ -63,7 +106,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             <p className="text-xs text-gray-400">Ask about the design</p>
           </div>
         </div>
-        <button 
+        <button
           onClick={onClose}
           className="p-2 hover:bg-gray-800 rounded-full transition-colors"
         >
@@ -74,26 +117,26 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {!hasArchitecture ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 px-6">
-                <Bot className="w-12 h-12 mb-3 opacity-30" />
-                <p className="text-sm">Generate an architecture first to start asking questions.</p>
-            </div>
+          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 px-6">
+            <Bot className="w-12 h-12 mb-3 opacity-30" />
+            <p className="text-sm">Generate an architecture first to start asking questions.</p>
+          </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 px-6 space-y-6">
             <div className="p-4 bg-gray-800/50 rounded-full">
-                <Bot className="w-8 h-8 text-purple-400 opacity-80" />
+              <Bot className="w-8 h-8 text-purple-400 opacity-80" />
             </div>
             <div>
-                <p className="text-sm font-medium text-gray-300 mb-2">How can I help you?</p>
-                <p className="text-xs text-gray-500">Ask about data flow, component choices, or scalability.</p>
+              <p className="text-sm font-medium text-gray-300 mb-2">How can I help you?</p>
+              <p className="text-xs text-gray-500">Ask about data flow, component choices, or scalability.</p>
             </div>
             <div className="grid grid-cols-1 gap-2 w-full">
-                <button onClick={() => onSendMessage("Explain the data flow")} className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 py-2 px-3 rounded-lg transition-colors text-left">
-                    "Explain the data flow"
-                </button>
-                <button onClick={() => onSendMessage("What technologies should I use?")} className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 py-2 px-3 rounded-lg transition-colors text-left">
-                    "What technologies should I use?"
-                </button>
+              <button onClick={() => onSendMessage("Explain the data flow")} className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 py-2 px-3 rounded-lg transition-colors text-left">
+                "Explain the data flow"
+              </button>
+              <button onClick={() => onSendMessage("What technologies should I use?")} className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 py-2 px-3 rounded-lg transition-colors text-left">
+                "What technologies should I use?"
+              </button>
             </div>
           </div>
         ) : (
@@ -107,21 +150,22 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                   <Bot className="w-4 h-4 text-purple-400" />
                 </div>
               )}
-              
+
               <div
-                className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-blue-600 text-white rounded-br-none'
-                    : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-bl-none'
-                }`}
+                className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${msg.role === 'user'
+                  ? 'bg-blue-600 text-white rounded-br-none'
+                  : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-bl-none'
+                  }`}
               >
-                {/* Simple formatting for AI responses */}
-                {msg.content.split('\n').map((line, i) => (
-                    <React.Fragment key={i}>
-                        {line}
-                        {i < msg.content.split('\n').length - 1 && <br />}
-                    </React.Fragment>
-                ))}
+                {msg.role === 'user' ? (
+                  msg.content
+                ) : (
+                  <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900/50 prose-pre:border prose-pre:border-gray-700">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
               </div>
 
               {msg.role === 'user' && (
@@ -132,11 +176,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             </div>
           ))
         )}
-        
+
         {isTyping && (
           <div className="flex gap-3 justify-start">
-             <div className="w-8 h-8 rounded-full bg-purple-600/20 flex items-center justify-center flex-shrink-0 mt-1">
-                <Bot className="w-4 h-4 text-purple-400" />
+            <div className="w-8 h-8 rounded-full bg-purple-600/20 flex items-center justify-center flex-shrink-0 mt-1">
+              <Bot className="w-4 h-4 text-purple-400" />
             </div>
             <div className="bg-gray-800 border border-gray-700 p-3 rounded-2xl rounded-bl-none">
               <div className="flex gap-1">
