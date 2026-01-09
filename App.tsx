@@ -9,7 +9,7 @@ import InfoPanel from './components/InfoPanel';
 import HistoryPanel from './components/HistoryPanel';
 import ChatPanel from './components/ChatPanel';
 import AuthScreen from './components/AuthScreen';
-import { generateArchitecture, askArchitectureQuestion } from './services/geminiService';
+import { generateArchitecture, askArchitectureQuestion } from './services/groqService';
 import { authService } from './services/authService';
 import { storageService } from './services/storageService';
 import { supabase } from './services/supabaseClient';
@@ -227,15 +227,22 @@ function App() {
 
     try {
       // Get AI response
-      const responseText = await askArchitectureQuestion(data, content, chatMessages);
+      const result = await askArchitectureQuestion(data, content, chatMessages);
 
       const aiMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'ai',
-        content: responseText,
+        content: result.message,
         timestamp: Date.now()
       };
       setChatMessages(prev => [...prev, aiMsg]);
+
+      // Apply architecture updates if requested
+      if (result.updatedArchitecture) {
+        setData(result.updatedArchitecture);
+        setCurrentId(undefined); // Reset ID as this is now a modified unsaved version
+      }
+
     } catch (err) {
       console.error("Chat Error:", err);
       // Optional: Add error message to chat

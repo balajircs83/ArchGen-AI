@@ -23,12 +23,12 @@ const architectureSchema: Schema = {
             type: Type.STRING,
             description: "Category of the component. Must be one of: service, database, client, queue, external, cache.",
             enum: [
-                NodeType.SERVICE, 
-                NodeType.DATABASE, 
-                NodeType.CLIENT, 
-                NodeType.QUEUE, 
-                NodeType.EXTERNAL, 
-                NodeType.CACHE
+              NodeType.SERVICE,
+              NodeType.DATABASE,
+              NodeType.CLIENT,
+              NodeType.QUEUE,
+              NodeType.EXTERNAL,
+              NodeType.CACHE
             ]
           },
           details: { type: Type.STRING, description: "A short description of the component's role." },
@@ -65,8 +65,8 @@ const architectureSchema: Schema = {
 
 export const generateArchitecture = async (prompt: string): Promise<GeneratedArchitecture> => {
   try {
-    const modelId = "gemini-2.5-flash"; // Good balance of speed and reasoning for structured output
-    
+    const modelId = "gemini-1.5-flash"; // Good balance of speed and reasoning for structured output
+
     const response = await ai.models.generateContent({
       model: modelId,
       contents: `Design a system architecture for: "${prompt}". 
@@ -84,7 +84,7 @@ export const generateArchitecture = async (prompt: string): Promise<GeneratedArc
       const data = JSON.parse(response.text) as GeneratedArchitecture;
       return data;
     }
-    
+
     throw new Error("No content generated");
   } catch (error) {
     console.error("Gemini API Error:", error);
@@ -93,13 +93,13 @@ export const generateArchitecture = async (prompt: string): Promise<GeneratedArc
 };
 
 export const askArchitectureQuestion = async (
-  architecture: GeneratedArchitecture, 
+  architecture: GeneratedArchitecture,
   question: string,
   history: ChatMessage[]
 ): Promise<string> => {
   try {
-    const modelId = "gemini-2.5-flash";
-    
+    const modelId = "gemini-1.5-flash";
+
     // Simplify architecture for context to save tokens and focus attention
     const context = JSON.stringify({
       title: architecture.title,

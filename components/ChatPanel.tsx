@@ -137,6 +137,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
               <button onClick={() => onSendMessage("What technologies should I use?")} className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 py-2 px-3 rounded-lg transition-colors text-left">
                 "What technologies should I use?"
               </button>
+              <button onClick={() => onSendMessage("Add a Redis cache")} className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 py-2 px-3 rounded-lg transition-colors text-left">
+                "Add a Redis cache"
+              </button>
             </div>
           </div>
         ) : (
