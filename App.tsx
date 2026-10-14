@@ -1,21 +1,31 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { Sparkles, Send, Home, Info as InfoIcon, Loader2, History, LogOut, User as UserIcon, MessageSquare, Download, ChevronDown, Image as ImageIcon, FileImage, FileType, FileVideo, Server, Globe, Shield } from 'lucide-react';
+import { Sparkles, Send, Info as InfoIcon, Loader2, LogOut, MessageSquare, Download, ChevronDown, Image as ImageIcon, FileImage, FileType, FileVideo, Sun, Moon, Plus, Save, Trash2, Layout, LayoutDashboard, Menu, GraduationCap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toPng, toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import gifshot from 'gifshot';
 import { Node } from 'reactflow';
 import ArchitectureDiagram from './components/ArchitectureDiagram';
 import InfoPanel from './components/InfoPanel';
-import HistoryPanel from './components/HistoryPanel';
 import ChatPanel from './components/ChatPanel';
 import AuthScreen from './components/AuthScreen';
+import UseCaseExam from './components/UseCaseExam';
 import { generateArchitecture, askArchitectureQuestion } from './services/groqService';
 import { authService } from './services/authService';
 import { storageService } from './services/storageService';
-import { supabase } from './services/supabaseClient';
+import { useTheme, surfaceColor } from './utils/theme';
 import { GeneratedArchitecture, ArchitectureNodeData, User, SavedArchitecture, ChatMessage } from './types';
 
 function App() {
+  const [theme, toggleTheme] = useTheme();
+  const exportBg = surfaceColor(theme);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('archgen-sidebar') === 'collapsed');
+  const toggleCollapsed = () => {
+    localStorage.setItem('archgen-sidebar', collapsed ? 'open' : 'collapsed');
+    setCollapsed(!collapsed);
+  };
+  const [view, setView] = useState<'dashboard' | 'usecase'>('dashboard');
+
   // Auth State
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -29,7 +39,6 @@ function App() {
 
   // UI Panels State
   const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
@@ -54,30 +63,11 @@ function App() {
     }
   }, []);
 
-  // Initialize Supabase Auth Listener
   useEffect(() => {
-    const initializeAuth = async () => {
-      // Check initial session
-      const currentUser = await authService.getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
-        loadHistory(currentUser.id);
-      }
-      setIsAuthLoading(false);
-    };
-
-    initializeAuth();
-
-    // Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const mappedUser: User = {
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata.full_name || 'User'
-        };
-        setUser(mappedUser);
-        loadHistory(mappedUser.id);
+    return authService.onChange((u) => {
+      if (u) {
+        setUser(u);
+        loadHistory(u.id);
       } else {
         setUser(null);
         setHistory([]);
@@ -86,10 +76,7 @@ function App() {
       }
       setIsAuthLoading(false);
     });
-
-    return () => subscription.unsubscribe();
   }, [loadHistory]);
-
 
   const handleLogin = (loggedInUser: User) => {
     // Handled by Auth Listener automatically, but we can set state immediately for faster UI
@@ -100,7 +87,6 @@ function App() {
   const handleLogout = async () => {
     await authService.logout();
     // State reset handled by auth listener
-    setIsHistoryOpen(false);
     setIsInfoPanelOpen(false);
     setIsChatOpen(false);
   };
@@ -120,7 +106,6 @@ function App() {
       const result = await generateArchitecture(activePrompt);
       setData(result);
       setIsInfoPanelOpen(true);
-      setPrompt('');
     } catch (err) {
       setError("Failed to generate architecture. Please try again with a more specific prompt.");
       console.error(err);
@@ -138,13 +123,13 @@ function App() {
   };
 
   const handleGoHome = () => {
+    setView('dashboard');
     setData(null);
     setCurrentId(undefined);
     setPrompt('');
     setSelectedNode(null);
     setChatMessages([]);
     setIsInfoPanelOpen(false);
-    setIsHistoryOpen(false);
     setIsChatOpen(false);
     setError(null);
   };
@@ -167,12 +152,12 @@ function App() {
   };
 
   const handleSelectHistory = (item: SavedArchitecture) => {
+    setView('dashboard');
     setData(item);
     setCurrentId(item.id);
     setPrompt(item.prompt);
     setSelectedNode(null);
     setChatMessages([]); // Clear chat when switching history
-    setIsHistoryOpen(false);
     setIsInfoPanelOpen(true); // Auto-open info when loading history item to see details
   };
 
@@ -202,15 +187,7 @@ function App() {
     setTimeout(() => setSelectedNode(null), 300);
   };
 
-  const toggleHistory = () => {
-    if (isChatOpen) setIsChatOpen(false);
-    setIsHistoryOpen(!isHistoryOpen);
-  };
-
-  const toggleChat = () => {
-    if (isHistoryOpen) setIsHistoryOpen(false);
-    setIsChatOpen(!isChatOpen);
-  };
+  const toggleChat = () => setIsChatOpen(!isChatOpen);
 
   const handleSendMessage = async (content: string) => {
     if (!data) return;
@@ -263,8 +240,8 @@ function App() {
 
     try {
       const dataUrl = format === 'png'
-        ? await toPng(element, { backgroundColor: '#111827', quality: 1.0 })
-        : await toJpeg(element, { backgroundColor: '#111827', quality: 1.0 });
+        ? await toPng(element, { backgroundColor: exportBg, quality: 1.0 })
+        : await toJpeg(element, { backgroundColor: exportBg, quality: 1.0 });
 
       const link = document.createElement('a');
       link.download = `${data?.title || 'architecture'}.${format}`;
@@ -289,7 +266,7 @@ function App() {
     if (minimap) minimap.style.display = 'none';
 
     try {
-      const dataUrl = await toPng(element, { backgroundColor: '#111827', quality: 1.0 });
+      const dataUrl = await toPng(element, { backgroundColor: exportBg, quality: 1.0 });
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'px',
@@ -334,7 +311,7 @@ function App() {
         });
 
         const frame = await toPng(element, {
-          backgroundColor: '#111827',
+          backgroundColor: exportBg,
           quality: 1.0,
           pixelRatio: 1
         });
@@ -370,11 +347,10 @@ function App() {
     }
   };
 
-  // Render Authentication Screen if not logged in
   if (isAuthLoading) {
     return (
-      <div className="w-screen h-screen bg-gray-900 flex items-center justify-center">
-        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+      <div className="w-screen h-screen bg-app flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-muted animate-spin" />
       </div>
     );
   }
@@ -383,279 +359,265 @@ function App() {
     return <AuthScreen onLogin={handleLogin} />;
   }
 
+  const dots = ['bg-blue-500', 'bg-emerald-500', 'bg-orange-500', 'bg-violet-500', 'bg-rose-500', 'bg-cyan-500'];
+  const examples = [
+    { title: 'E-Commerce Flow', desc: 'High-traffic web app with inventory sync', tag: 'Web', dot: 'bg-blue-500', prompt: 'A scalable e-commerce platform with real-time inventory and AI recommendations' },
+    { title: 'FinTech Core', desc: 'Event-driven banking with microservices', tag: 'Finance', dot: 'bg-violet-500', prompt: 'Microservices architecture for a banking app with event-driven transactions' },
+    { title: 'IoT Data Pipeline', desc: 'Secure, serverless streaming for IoT devices', tag: 'IoT', dot: 'bg-emerald-500', prompt: 'Secure IoT data pipeline using serverless functions and real-time streaming' },
+  ];
+  const iconBtn = 'w-8 h-8 flex items-center justify-center rounded-lg border border-line bg-surface text-muted hover:text-fg transition-colors';
+  const ghostBtn = 'h-8 px-3 flex items-center gap-1.5 rounded-lg border border-line bg-surface text-sm font-medium hover:bg-surface2 transition-colors disabled:opacity-50';
+  const card = 'rounded-xl border border-line bg-surface';
+  const lastSaved = history[0] ? new Date(history[0].timestamp).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : 'nothing saved yet';
+
   return (
-    <div className="relative w-screen h-screen flex flex-col bg-gray-900 overflow-hidden">
+    <div className="w-screen h-screen flex bg-app text-fg overflow-hidden">
+      {isSidebarOpen && <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
-      {/* Header / Navbar */}
-      <header className="absolute top-0 left-0 right-0 z-40 p-4 pointer-events-none">
-        <div className="max-w-7xl mx-auto flex justify-between items-start">
-          <div className="pointer-events-auto flex items-center gap-3">
-            {/* Logo Section */}
-            <button
-              onClick={handleGoHome}
-              className="bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-2xl p-2 px-4 shadow-xl flex items-center gap-2 pointer-events-auto hover:bg-gray-800 transition-all cursor-pointer"
-            >
-              <div className="p-2 bg-blue-600 rounded-lg">
-                <Home className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-left">
-                <h1 className="font-bold text-white leading-tight">ArchGen AI</h1>
-                <p className="text-[10px] text-gray-400 font-medium">SYSTEM ARCHITECT</p>
-              </div>
-            </button>
-
-            {/* History Toggle */}
-            <button
-              onClick={toggleHistory}
-              className={`p-3 rounded-xl border transition-all shadow-lg flex items-center gap-2 group ${isHistoryOpen
-                ? 'bg-blue-600 border-blue-500 text-white'
-                : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white'
-                }`}
-              title="View History"
-            >
-              <History className="w-5 h-5" />
-              <span className="text-sm font-medium hidden md:inline">History</span>
-            </button>
-
-            {/* AI Q&A Toggle */}
-            <button
-              onClick={toggleChat}
-              className={`p-3 rounded-xl border transition-all shadow-lg flex items-center gap-2 group ${isChatOpen
-                ? 'bg-purple-600 border-purple-500 text-white'
-                : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white'
-                }`}
-              title="Ask AI"
-            >
-              <MessageSquare className="w-5 h-5" />
-              <span className="text-sm font-medium hidden md:inline">Ask AI</span>
-            </button>
+      {/* Sidebar (collapse only applies on desktop; mobile uses the drawer) */}
+      <aside className={`fixed md:relative z-50 h-full w-[220px] ${collapsed ? 'md:w-[60px]' : ''} shrink-0 flex flex-col bg-surface border-r border-line transition-transform md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        {/* Collapse handle sits on the splitter between sidebar and content */}
+        <button onClick={toggleCollapsed} title={collapsed ? 'Expand menu' : 'Collapse menu'} aria-label={collapsed ? 'Expand menu' : 'Collapse menu'}
+          className="hidden md:flex absolute -right-3 top-[60px] z-10 w-6 h-6 items-center justify-center rounded-full border border-line bg-surface text-muted hover:text-fg hover:border-muted shadow-sm">
+          {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+        </button>
+        <div className="p-3">
+          <div className="flex items-center gap-2 px-2 py-1.5">
+            <div className="w-6 h-6 rounded-md bg-accent text-accent-fg flex items-center justify-center"><Layout className="w-3.5 h-3.5" /></div>
+            <span className={`font-semibold ${collapsed ? 'md:hidden' : ''}`}>ArchGen AI</span>
           </div>
+        </div>
+        <nav className="px-3 space-y-1">
+          <button onClick={() => { handleGoHome(); setIsSidebarOpen(false); }}
+            title={collapsed ? 'Dashboard' : undefined}
+            className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-medium border ${collapsed ? 'md:justify-center' : ''} ${view === 'dashboard' && !data ? 'bg-accent-soft border-accent/60' : 'border-transparent hover:bg-surface2'}`}>
+            <LayoutDashboard className="w-4 h-4 shrink-0" /><span className={`${collapsed ? 'md:hidden' : ''}`}>Dashboard</span>
+          </button>
+          <button onClick={() => { toggleChat(); setIsSidebarOpen(false); }}
+            title={collapsed ? 'Ask AI' : undefined}
+            className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-medium border ${collapsed ? 'md:justify-center' : ''} ${isChatOpen ? 'bg-accent-soft border-accent/60' : 'border-transparent hover:bg-surface2'}`}>
+            <MessageSquare className="w-4 h-4 shrink-0" /><span className={`${collapsed ? 'md:hidden' : ''}`}>Ask AI</span>
+          </button>
+          <button onClick={() => { setView('usecase'); setIsSidebarOpen(false); }}
+            title={collapsed ? 'Use Cases' : undefined}
+            className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm font-medium border ${collapsed ? 'md:justify-center' : ''} ${view === 'usecase' ? 'bg-accent-soft border-accent/60' : 'border-transparent hover:bg-surface2'}`}>
+            <GraduationCap className="w-4 h-4 shrink-0" /><span className={`${collapsed ? 'md:hidden' : ''}`}>Use Cases</span>
+          </button>
+        </nav>
 
-          <div className="pointer-events-auto flex gap-3">
-            {/* User Profile / Logout */}
-            <div className="flex items-center gap-3 bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-2xl p-1.5 pl-4 shadow-xl">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                <span className="text-sm font-medium text-gray-300 hidden md:inline">{user.name}</span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="p-2 hover:bg-red-500/20 hover:text-red-400 text-gray-400 rounded-xl transition-colors"
-                title="Sign Out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Info Panel Toggle (Only visible if data exists) */}
-            {data && (
-              <div className="flex gap-2">
-                {!currentId && (
-                  <button
-                    onClick={handleSave}
-                    className="p-3 bg-green-600 hover:bg-green-500 text-white rounded-xl border border-green-500 transition-all shadow-lg group flex items-center gap-2"
-                    title="Save Architecture"
-                    disabled={isLoading}
-                  >
-                    <Sparkles className="w-5 h-5" />
-                    <span className="text-sm font-medium hidden md:inline">Save</span>
-                  </button>
-                )}
-                <button
-                  onClick={() => { setSelectedNode(null); setIsInfoPanelOpen(true); }}
-                  className="p-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl border border-gray-700 transition-all shadow-lg group"
-                  title="View Explanation"
-                >
-                  <InfoIcon className="w-5 h-5 group-hover:text-blue-400 transition-colors" />
+        <div className={`mt-5 px-3 flex-1 min-h-0 flex flex-col ${collapsed ? 'md:hidden' : ''}`}>
+          <div className="flex items-center justify-between px-2.5 mb-1.5">
+            <span className="text-[11px] text-muted">Saved designs</span>
+            {history.length > 0 && <span className="text-[10px] px-1.5 rounded-full bg-accent-soft text-fg border border-accent/50">{history.length}</span>}
+          </div>
+          <div className="flex-1 overflow-y-auto space-y-0.5">
+            {history.length === 0 && <p className="px-2.5 py-2 text-xs text-muted">Generated designs you save appear here.</p>}
+            {history.map((item, i) => (
+              <div key={item.id} onClick={() => { handleSelectHistory(item); setIsSidebarOpen(false); }}
+                className={`group flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer text-sm ${currentId === item.id ? 'bg-accent-soft' : 'hover:bg-surface2'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dots[i % dots.length]}`} />
+                <span className="truncate flex-1" title={item.prompt}>{item.title}</span>
+                <button onClick={(e) => handleDeleteHistory(item.id, e)} title="Delete" className="opacity-0 group-hover:opacity-100 text-muted hover:text-red-500">
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
-            )}
+            ))}
           </div>
         </div>
-      </header>
 
-      {/* Main Canvas Area */}
-      <main className="flex-1 w-full h-full relative">
-        {data ? (
-          <ArchitectureDiagram data={data} onNodeClick={handleNodeClick} />
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center z-10 select-none">
-            {!isLoading && (
-              <>
-                <div className="w-24 h-24 bg-gray-800 rounded-3xl flex items-center justify-center mb-6 shadow-2xl border border-gray-700 rotate-3 transform hover:rotate-6 transition-transform duration-500 group">
-                  <Sparkles className="w-10 h-10 text-blue-500 group-hover:scale-110 transition-transform" />
-                </div>
-                <h2 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 mb-4 animate-fadeIn">
-                  Design Systems in Seconds
-                </h2>
-                <p className="text-gray-400 max-w-lg text-lg mb-8 animate-fadeIn delay-100">
-                  Describe your application, and our AI will engineer a complete, interactive system architecture diagram for you.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl w-full animate-fadeIn delay-200">
-                  <button
-                    onClick={() => handleExampleClick("A scalable e-commerce platform with real-time inventory and AI recommendations")}
-                    className="p-6 bg-gray-800/40 hover:bg-gray-800/80 border border-gray-700/50 rounded-2xl text-left transition-all hover:scale-[1.02] active:scale-95 group"
-                  >
-                    <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-500/40 transition-colors">
-                      <Globe className="w-5 h-5 text-blue-400" />
-                    </div>
-                    <h3 className="text-white font-bold mb-2">E-Commerce Flow</h3>
-                    <p className="text-sm text-gray-400">High-traffic web app with inventory sync</p>
-                  </button>
-
-                  <button
-                    onClick={() => handleExampleClick("Microservices architecture for a banking app with event-driven transactions")}
-                    className="p-6 bg-gray-800/40 hover:bg-gray-800/80 border border-gray-700/50 rounded-2xl text-left transition-all hover:scale-[1.02] active:scale-95 group"
-                  >
-                    <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-purple-500/40 transition-colors">
-                      <Server className="w-5 h-5 text-purple-400" />
-                    </div>
-                    <h3 className="text-white font-bold mb-2">FinTech Core</h3>
-                    <p className="text-sm text-gray-400">Event-driven banking with microservices</p>
-                  </button>
-
-                  <button
-                    onClick={() => handleExampleClick("Secure IoT data pipeline using serverless functions and real-time streaming")}
-                    className="p-6 bg-gray-800/40 hover:bg-gray-800/80 border border-gray-700/50 rounded-2xl text-left transition-all hover:scale-[1.02] active:scale-95 group"
-                  >
-                    <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center mb-4 group-hover:bg-green-500/40 transition-colors">
-                      <Shield className="w-5 h-5 text-green-400" />
-                    </div>
-                    <h3 className="text-white font-bold mb-2">IoT Data Pipeline</h3>
-                    <p className="text-sm text-gray-400">Secure, serverless streaming for IoT devies</p>
-                  </button>
-                </div>
-              </>
-            )}
+        {collapsed && <div className="hidden md:block flex-1" />}
+        <div className={`p-3 border-t border-line flex items-center gap-2.5 ${collapsed ? 'md:justify-center' : ''}`} title={collapsed ? `${user.name} · ${user.email}` : undefined}>
+          <div className="w-8 h-8 shrink-0 rounded-full bg-accent text-accent-fg flex items-center justify-center text-sm font-semibold">{user.name.charAt(0).toUpperCase()}</div>
+          <div className={`min-w-0 flex-1 leading-tight ${collapsed ? 'md:hidden' : ''}`}>
+            <div className="text-sm font-medium truncate">{user.name}</div>
+            <div className="text-[11px] text-muted truncate">{user.email}</div>
           </div>
-        )}
-      </main>
-
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gray-900/80 backdrop-blur-sm">
-          <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
-          <h3 className="text-xl font-semibold text-white">Architecting Solution...</h3>
-          <p className="text-gray-400 mt-2">Analyzing requirements and designing components</p>
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-accent-soft border border-accent/50 ${collapsed ? 'md:hidden' : ''}`}>Synced</span>
         </div>
-      )}
+      </aside>
 
-      {/* Bottom Input Area */}
-      <div className="absolute bottom-8 left-0 right-0 z-40 px-4 pointer-events-none">
-        <div className="max-w-2xl mx-auto pointer-events-auto">
-          {error && (
-            <div className="mb-4 p-3 bg-red-900/50 border border-red-500/50 text-red-200 rounded-lg text-sm text-center backdrop-blur-md animate-fadeIn">
-              {error}
+      {/* Main column */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        <header className="h-12 shrink-0 bg-surface border-b border-line flex items-center justify-between px-4">
+          <div className="flex items-center gap-2 text-sm">
+            <button className="md:hidden mr-1" onClick={() => setIsSidebarOpen(true)} aria-label="Open menu"><Menu className="w-5 h-5" /></button>
+            <LayoutDashboard className="w-4 h-4 text-muted" />
+            <span className="font-medium">{view === 'usecase' ? 'Use Cases' : data ? data.title : 'Dashboard'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={toggleTheme} className={iconBtn} title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
+            <button onClick={handleLogout} className={iconBtn} title="Sign out"><LogOut className="w-4 h-4" /></button>
+          </div>
+        </header>
+
+        <main className="flex-1 min-h-0 flex flex-col p-4 md:p-5 gap-4">
+          {view === 'usecase' && (
+            <div>
+              <h1 className="text-xl font-bold">Use Cases</h1>
+              <p className="text-xs text-muted mt-0.5">AI-generated, enterprise scenario exams for architect, developer and admin certifications</p>
+            </div>
+          )}
+          {/* Kept mounted so an in-progress exam survives switching views. */}
+          <div className={view === 'usecase' ? 'contents' : 'hidden'}>
+            <UseCaseExam theme={theme} userId={user.id} />
+          </div>
+
+          {view === 'dashboard' && (<>
+          {/* Page header */}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-bold">{data ? data.title : 'Dashboard'}</h1>
+              <p className="text-xs text-muted mt-0.5">
+                {data ? `${data.nodes.length} components · ${data.edges.length} connections${currentId ? '' : ' · unsaved'}` : 'Describe a system and get an interactive architecture diagram'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {data && (
+                <>
+                  <button onClick={handleGoHome} className={ghostBtn}><Plus className="w-4 h-4" /> New</button>
+                  <button onClick={() => { setSelectedNode(null); setIsInfoPanelOpen(true); }} className={ghostBtn}><InfoIcon className="w-4 h-4" /> Details</button>
+                  <div className="relative">
+                    <button onClick={() => setIsExportOpen(!isExportOpen)} className={ghostBtn}>
+                      <Download className="w-4 h-4" /> Export <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExportOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isExportOpen && (
+                      <div className={`absolute right-0 top-full mt-2 w-48 ${card} shadow-xl overflow-hidden z-30`}>
+                        {([
+                          [ImageIcon, 'Export as PNG', () => exportAsImage('png')],
+                          [FileImage, 'Export as JPEG', () => exportAsImage('jpeg')],
+                          [FileType, 'Export as PDF', exportAsPDF],
+                          [FileVideo, 'Export as GIF', exportAsGIF],
+                        ] as const).map(([Icon, label, fn]) => (
+                          <button key={label} onClick={fn} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-surface2 transition-colors">
+                            <Icon className="w-4 h-4 text-muted" /> {label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {!currentId && (
+                    <button onClick={handleSave} disabled={isLoading} className="h-8 px-3 flex items-center gap-1.5 rounded-lg bg-fg text-app text-sm font-semibold disabled:opacity-50">
+                      <Save className="w-4 h-4" /> Save
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          {data ? (
+            <div className={`${card} flex-1 min-h-0 overflow-hidden`}>
+              <ArchitectureDiagram data={data} onNodeClick={handleNodeClick} theme={theme} />
+            </div>
+          ) : (
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
+              {/* Stat / template cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="rounded-xl border border-accent bg-accent-soft p-4">
+                  <div className="flex items-center justify-between text-xs"><span className="flex items-center gap-1.5"><Layout className="w-3.5 h-3.5" /> Saved designs</span></div>
+                  <div className="text-2xl font-bold mt-3">{history.length}</div>
+                  <div className="text-[11px] text-muted mt-1">last saved {lastSaved}</div>
+                </div>
+                {examples.map((ex) => (
+                  <button key={ex.title} onClick={() => handleExampleClick(ex.prompt)} disabled={isLoading}
+                    className={`${card} p-4 text-left hover:border-muted transition-colors`}>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5"><span className={`w-1.5 h-1.5 rounded-full ${ex.dot}`} />{ex.title}</span>
+                      <span className="px-1.5 rounded bg-accent-soft border border-accent/50 text-[10px]">{ex.tag}</span>
+                    </div>
+                    <div className="text-sm font-medium mt-3 leading-snug">{ex.desc}</div>
+                    <div className="text-[11px] text-muted mt-1 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Click to generate</div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                {/* Saved architectures table */}
+                <div className={`${card} xl:col-span-2 overflow-hidden`}>
+                  <div className="px-4 py-3 border-b border-line">
+                    <div className="font-semibold">Your architectures</div>
+                    <div className="text-[11px] text-muted">{history.length} saved</div>
+                  </div>
+                  {history.length === 0 ? (
+                    <div className="p-10 text-center text-sm text-muted">Nothing saved yet. Generate a design below and hit Save.</div>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead className="text-[11px] text-muted text-left">
+                        <tr><th className="px-4 py-2 font-medium">Design</th><th className="px-2 font-medium text-right">Components</th><th className="px-2 font-medium text-right">Connections</th><th className="px-2 font-medium text-right">Created</th><th className="px-4" /></tr>
+                      </thead>
+                      <tbody>
+                        {history.map((item, i) => (
+                          <tr key={item.id} className="border-t border-line hover:bg-surface2">
+                            <td className="px-4 py-3"><span className="flex items-center gap-2"><span className={`w-1.5 h-1.5 rounded-full ${dots[i % dots.length]}`} /><span className="truncate max-w-[260px]" title={item.prompt}>{item.title}</span></span></td>
+                            <td className="px-2 text-right tabular-nums">{item.nodes.length}</td>
+                            <td className="px-2 text-right tabular-nums">{item.edges.length}</td>
+                            <td className="px-2 text-right text-muted">{new Date(item.timestamp).toLocaleDateString()}</td>
+                            <td className="px-4 text-right whitespace-nowrap">
+                              <button onClick={() => handleSelectHistory(item)} className="h-7 px-3 rounded-md border border-line bg-surface hover:bg-surface2 text-xs">View</button>
+                              <button onClick={(e) => handleDeleteHistory(item.id, e)} className="ml-1 h-7 px-2 rounded-md text-muted hover:text-red-500" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                {/* Tips */}
+                <div className={card}>
+                  <div className="px-4 py-3 border-b border-line">
+                    <div className="font-semibold">Tips</div>
+                    <div className="text-[11px] text-muted">Get more from ArchGen</div>
+                  </div>
+                  {[
+                    ['Be specific', 'Mention scale, cloud, and key features for a sharper diagram.'],
+                    ['Click any node', 'See its details and technologies in the side panel.'],
+                    ['Ask AI to edit', 'Try "Add a Redis cache" in Ask AI to change the design.'],
+                    ['Export anywhere', 'Download as PNG, JPEG, PDF or an animated GIF.'],
+                  ].map(([t, d]) => (
+                    <div key={t} className="px-4 py-3 border-t border-line first:border-t-0">
+                      <div className="text-sm font-medium">{t}</div>
+                      <div className="text-[11px] text-muted mt-0.5">{d}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
-          <form onSubmit={(e) => handleGenerateBase(e)} className="relative group">
-            <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl opacity-75 group-hover:opacity-100 blur transition duration-500"></div>
-            <div className="relative flex items-center bg-gray-900 rounded-2xl p-1.5 shadow-2xl gap-2">
+          {/* Prompt bar */}
+          <div className="shrink-0">
+            {error && <div className="mb-2 px-3 py-2 rounded-lg border border-red-500/40 bg-red-500/10 text-red-500 text-sm text-center">{error}</div>}
+            <form onSubmit={(e) => handleGenerateBase(e)} className={`${card} flex items-center gap-2 p-1.5 focus-within:border-muted`}>
               <input
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="e.g., A scalable e-commerce platform with real-time inventory and AI recommendations..."
-                className="w-full bg-transparent text-white placeholder-gray-500 px-4 py-3 outline-none text-lg"
+                placeholder="Describe a system, e.g. a scalable e-commerce platform with real-time inventory…"
+                className="flex-1 min-w-0 bg-transparent placeholder:text-muted px-3 py-2 outline-none"
                 disabled={isLoading}
               />
-
-              <div className="flex items-center gap-2 pr-1">
-                {data && !isLoading && (
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setIsExportOpen(!isExportOpen)}
-                      className="p-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl border border-gray-700 transition-all flex items-center gap-2 group/export"
-                      title="Export Diagram"
-                    >
-                      <Download className="w-5 h-5 text-blue-400 group-hover/export:scale-110 transition-transform" />
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExportOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    {isExportOpen && (
-                      <div className="absolute bottom-full right-0 mb-3 w-48 bg-gray-800 border border-gray-700 rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-2 duration-200 z-50">
-                        <button
-                          type="button"
-                          onClick={() => exportAsImage('png')}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-blue-600 hover:text-white transition-colors"
-                        >
-                          <ImageIcon className="w-4 h-4" />
-                          Export as PNG
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => exportAsImage('jpeg')}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-blue-600 hover:text-white transition-colors"
-                        >
-                          <FileImage className="w-4 h-4" />
-                          Export as JPEG
-                        </button>
-                        <button
-                          type="button"
-                          onClick={exportAsPDF}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-blue-600 hover:text-white transition-colors"
-                        >
-                          <FileType className="w-4 h-4" />
-                          Export as PDF
-                        </button>
-                        <button
-                          type="button"
-                          onClick={exportAsGIF}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-blue-600 hover:text-white transition-colors border-t border-gray-700"
-                        >
-                          <FileVideo className="w-4 h-4 text-purple-400" />
-                          <div className="flex flex-col items-start">
-                            <span>Export as GIF</span>
-                            <span className="text-[10px] opacity-60">Animated flow</span>
-                          </div>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isLoading || !prompt.trim()}
-                  className="p-3 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-blue-500/25"
-                >
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-          </form>
-        </div>
+              <button type="submit" disabled={isLoading || !prompt.trim()} className="h-9 px-4 flex items-center gap-2 rounded-lg bg-fg text-app text-sm font-semibold disabled:opacity-40">
+                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Generate
+              </button>
+            </form>
+          </div>
+          </>)}
+        </main>
       </div>
 
-      {/* Recording Overlay */}
-      {isRecording && (
-        <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-gray-900/60 backdrop-blur-md">
-          <div className="bg-gray-800 p-8 rounded-3xl border border-gray-700 shadow-2xl flex flex-col items-center gap-4">
-            <div className="relative">
-              <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
-              <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
-                {recordingProgress}%
-              </div>
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-white">Capturing Animation</h3>
-              <p className="text-sm text-gray-400">Recording data flow frames...</p>
-            </div>
+      {/* Loading / recording overlays */}
+      {(isLoading || isRecording) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-app/70 backdrop-blur-sm">
+          <div className={`${card} p-8 shadow-2xl flex flex-col items-center gap-3 text-center`}>
+            <Loader2 className="w-8 h-8 animate-spin" />
+            <h3 className="font-semibold">{isRecording ? `Capturing animation… ${recordingProgress}%` : 'Architecting solution…'}</h3>
+            <p className="text-sm text-muted">{isRecording ? 'Recording data flow frames' : 'Analyzing requirements and designing components'}</p>
           </div>
         </div>
       )}
-
-      {/* Sidebars */}
-      <HistoryPanel
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        history={history}
-        onSelect={handleSelectHistory}
-        onDelete={handleDeleteHistory}
-        currentId={currentId}
-      />
 
       <ChatPanel
         isOpen={isChatOpen}

@@ -21,12 +21,18 @@ const nodeTypes = {
 
 interface ArchitectureDiagramProps {
   data: GeneratedArchitecture | null;
+  theme: 'dark' | 'light';
+  showMiniMap?: boolean;
   onNodeClick: (node: Node<ArchitectureNodeData>) => void;
 }
 
-const ArchitectureDiagram: React.FC<ArchitectureDiagramProps> = ({ data, onNodeClick }) => {
+const ArchitectureDiagram: React.FC<ArchitectureDiagramProps> = ({ data, onNodeClick, theme, showMiniMap = true }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const dark = theme === 'dark';
+  const edgeColor = dark ? '#60a5fa' : '#2563eb';
+  const bgColor = dark ? '#171a20' : '#ffffff';
 
   useEffect(() => {
     if (!data) return;
@@ -50,17 +56,17 @@ const ArchitectureDiagram: React.FC<ArchitectureDiagramProps> = ({ data, onNodeC
       label: e.label ? `${index + 1}. ${e.label}` : `${index + 1}`,
       animated: true, // Key for data flow visualization
       style: {
-        stroke: '#60a5fa',
+        stroke: edgeColor,
         strokeWidth: 2,
         strokeDasharray: '6', // Explicitly define dasharray to ensure it's captured
       },
-      labelStyle: { fill: '#60a5fa', fontWeight: 700, fontSize: 10 },
-      labelBgStyle: { fill: '#111827', fillOpacity: 0.9 },
+      labelStyle: { fill: edgeColor, fontWeight: 700, fontSize: 10 },
+      labelBgStyle: { fill: bgColor, fillOpacity: 0.9 },
       labelBgPadding: [8, 4],
       labelBgBorderRadius: 4,
       markerEnd: {
         type: MarkerType.ArrowClosed,
-        color: '#60a5fa',
+        color: edgeColor,
       },
     }));
 
@@ -72,18 +78,15 @@ const ArchitectureDiagram: React.FC<ArchitectureDiagramProps> = ({ data, onNodeC
 
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-  }, [data, setNodes, setEdges]);
+  }, [data, theme, setNodes, setEdges]);
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
-  // Memoize background color for dark mode
-  const bgColor = '#111827'; // gray-900
-
   return (
-    <div className="w-full h-full text-black relative">
+    <div className="w-full h-full relative">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -93,17 +96,17 @@ const ArchitectureDiagram: React.FC<ArchitectureDiagramProps> = ({ data, onNodeC
         nodeTypes={nodeTypes}
         onNodeClick={(_, node) => onNodeClick(node)}
         fitView
-        className="bg-gray-900"
+        className="bg-surface"
         minZoom={0.1}
         maxZoom={1.5}
       >
-        <Background color="#374151" gap={20} size={1} />
+        <Background color={dark ? '#2a2f39' : '#d9d6cb'} gap={20} size={1} />
         <Controls
-          className="!flex !flex-col !gap-1 !p-1 !bg-gray-900/40 !backdrop-blur-xl !border !border-white/10 !rounded-2xl !shadow-2xl [&>button]:!bg-white/5 [&>button]:!border-none [&>button]:!rounded-xl [&>button]:!w-10 [&>button]:!h-10 [&>button:hover]:!bg-blue-600/50 [&>button]:!transition-all [&>button>svg]:!fill-white/80 [&>button]:!flex [&>button]:!items-center [&>button]:!justify-center"
+          className="!rounded-lg !overflow-hidden !border !border-line !shadow-none"
           showInteractive={false}
           position="bottom-left"
         />
-        <MiniMap
+        {showMiniMap && <MiniMap
           nodeColor={(n) => {
             switch (n.data.type) {
               case 'database': return '#22c55e';
@@ -112,9 +115,9 @@ const ArchitectureDiagram: React.FC<ArchitectureDiagramProps> = ({ data, onNodeC
               default: return '#6b7280';
             }
           }}
-          className="!bg-gray-800 border border-gray-700 rounded-lg overflow-hidden"
-          maskColor="rgba(0, 0, 0, 0.4)"
-        />
+          className="!bg-surface2 border border-line rounded-lg overflow-hidden"
+          maskColor={dark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.08)'}
+        />}
       </ReactFlow>
     </div>
   );

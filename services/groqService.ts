@@ -2,14 +2,12 @@ import Groq from 'groq-sdk';
 import { GeneratedArchitecture, NodeType, ChatMessage } from '../types';
 
 const apiKey = import.meta.env.VITE_GROQ_API_KEY || '';
-const groq = new Groq({
+export const groq = new Groq({
     apiKey,
     dangerouslyAllowBrowser: true
 });
 
-// The user's screenshot suggested "meta-llama/llama-4-scout-17b-16e-instruct" 
-// but we default to the stable, highly capable Llama 3.3 70B for reliability.
-const MODEL_ID = "llama-3.3-70b-versatile";
+export const MODEL_ID = "openai/gpt-oss-120b";
 
 const SYSTEM_PROMPT = `You are an expert software architect. 
 You must output ONLY valid JSON. 
@@ -55,21 +53,21 @@ const architectureSchema = {
         },
         edges: {
             type: "array",
-            description: "Connections between components representing data flow.",
+            description: "Connections between components representing data flow. These MUST be ordered sequentially to represent the primary flow of data (Step 1, Step 2, etc.).",
             items: {
                 type: "object",
                 properties: {
                     id: { type: "string" },
                     source: { type: "string", description: "ID of the source node." },
                     target: { type: "string", description: "ID of the target node." },
-                    label: { type: "string", description: "Description of the data flowing or interaction type." }
+                    label: { type: "string", description: "Short description of the interaction." }
                 },
                 required: ["id", "source", "target"]
             }
         },
         explanation: {
             type: "string",
-            description: "A detailed Markdown explanation of the architecture, key decisions, and flow."
+            description: "A Markdown string. This MUST be formatted as a numbered list (1., 2., 3...) where each number corresponds exactly to the index+1 of the steps in the 'edges' array. Each item should explain that specific step of the flow in detail."
         }
     },
     required: ["title", "nodes", "edges", "explanation"]
@@ -84,7 +82,11 @@ export const generateArchitecture = async (prompt: string): Promise<GeneratedArc
 
     Ensure the output is a valid JSON matching the schema. 
     Focus on a modern, scalable, and robust design. 
-    Identify 5-15 key components (nodes) and their interactions (edges).`;
+    Identify 5-15 key components (nodes) and their interactions (edges).
+
+    CRITICAL: The 'edges' array must be sorted in the logical order of the user flow.
+    The 'explanation' must be a numbered list where Item 1 corresponds to Edge 1, Item 2 to Edge 2, etc.
+    EXTREMELY IMPORTANT: There must be a STRICT 1-to-1 mapping. If there are 20 edges, there MUST be 20 numbered items in the explanation. Do not summarize or group them.`;
 
         const completion = await groq.chat.completions.create({
             messages: [
@@ -149,6 +151,8 @@ export const askArchitectureQuestion = async (
     2. If the user requests a MODIFICATION (e.g., "Add a load balancer", "Remove the cache", "Change SQL to NoSQL"):
        - Perform the modification on the architecture.
        - Return the FULL, valid \`updated_architecture\` object (following the original schema: title, nodes, edges, explanation).
+       - CRITICAL: You MUST regenerate the 'explanation' field to match the new flow. It must be a numbered list (1., 2., 3...) corresponding to the new edges. DO NOT return an empty explanation.
+       - EXTREMELY IMPORTANT: There must be a STRICT 1-to-1 mapping. If there are 20 edges, there MUST be 20 numbered items in the explanation. Do not summarize or group them.
        - Ensure all nodes have unique IDs.
        - In the "message" field, explain what you changed.
        - MAINTAIN existing node IDs if they haven't changed, to preserve layout context if possible.

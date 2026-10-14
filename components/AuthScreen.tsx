@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Layout, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { Layout, ArrowRight, Loader2, Sparkles, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../utils/theme';
 import { authService } from '../services/authService';
 import { User } from '../types';
 
@@ -8,8 +9,10 @@ interface AuthScreenProps {
 }
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
+  const [theme, toggleTheme] = useTheme();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,10 +25,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     try {
       let user;
       if (isLogin) {
-        user = await authService.login(email);
+        user = await authService.login(email, password);
       } else {
         if (!name.trim()) throw new Error('Name is required');
-        user = await authService.register(email, name);
+        user = await authService.register(email, name, password);
       }
       onLogin(user);
     } catch (err: any) {
@@ -36,65 +39,46 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center relative overflow-hidden bg-gray-900">
-      {/* Background Ambience */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-600/20 blur-[120px]" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-600/20 blur-[120px]" />
-
-      <div className="relative z-10 w-full max-w-md p-8">
-        <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-3xl shadow-2xl p-8">
-          
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-              <Layout className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2">ArchGen AI</h1>
-            <p className="text-gray-400 text-center">
+    <div className="w-screen h-screen flex items-center justify-center bg-app text-fg relative overflow-hidden">
+      <button onClick={toggleTheme} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg border border-line bg-surface text-muted hover:text-fg" title="Toggle theme">
+        {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+      </button>
+      <div className="w-full max-w-sm p-4">
+        <div className="bg-surface border border-line rounded-2xl shadow-xl p-7">
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-12 h-12 bg-accent text-accent-fg rounded-xl flex items-center justify-center mb-3"><Layout className="w-6 h-6" /></div>
+            <h1 className="text-2xl font-bold">ArchGen AI</h1>
+            <p className="text-muted text-sm text-center mt-1">
               {isLogin ? 'Welcome back! Sign in to access your architectures.' : 'Join to start generating professional system designs.'}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             {error && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-200 text-sm text-center">
-                {error}
-              </div>
+              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-500 text-sm text-center">{error}</div>
             )}
 
             {!isLogin && (
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-400 ml-1">FULL NAME</label>
-                <input
-                  type="text"
-                  required={!isLogin}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  placeholder="John Doe"
-                />
-              </div>
+              <label className="text-[11px] font-medium text-muted">FULL NAME</label>
+              <input type="text" required={!isLogin} value={name} onChange={(e) => setName(e.target.value)}
+                className="w-full bg-surface2 border border-line rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-accent outline-none transition-all" placeholder="John Doe" />
+            </div>
             )}
-
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-400 ml-1">EMAIL ADDRESS</label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-gray-900/50 border border-gray-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                placeholder="name@company.com"
-              />
+              <label className="text-[11px] font-medium text-muted">EMAIL ADDRESS</label>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-surface2 border border-line rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-accent outline-none transition-all" placeholder="name@company.com" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-muted">PASSWORD</label>
+              <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-surface2 border border-line rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-accent outline-none transition-all" placeholder="At least 6 characters" />
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 group mt-4"
-            >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
+            <button type="submit" disabled={isLoading}
+              className="w-full bg-fg text-app font-semibold py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 group mt-2 disabled:opacity-60">
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                 <>
                   {isLogin ? 'Sign In' : 'Create Account'}
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -103,28 +87,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-gray-700/50 text-center">
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError(null);
-              }}
-              className="text-gray-400 hover:text-white text-sm font-medium transition-colors"
-            >
+          <div className="mt-6 pt-5 border-t border-line text-center">
+            <button onClick={() => { setIsLogin(!isLogin); setError(null); }} className="text-muted hover:text-fg text-sm font-medium transition-colors">
               {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
             </button>
           </div>
         </div>
 
-        <div className="mt-8 flex justify-center gap-6 text-gray-500 text-sm">
-           <div className="flex items-center gap-2">
-             <Sparkles className="w-4 h-4" />
-             <span>AI Powered</span>
-           </div>
-           <div className="flex items-center gap-2">
-             <Layout className="w-4 h-4" />
-             <span>Instant Diagrams</span>
-           </div>
+        <div className="mt-6 flex justify-center gap-6 text-muted text-sm">
+          <div className="flex items-center gap-2"><Sparkles className="w-4 h-4" /><span>AI Powered</span></div>
+          <div className="flex items-center gap-2"><Layout className="w-4 h-4" /><span>Instant Diagrams</span></div>
         </div>
       </div>
     </div>

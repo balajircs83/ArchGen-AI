@@ -83,7 +83,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
   return (
     <div
-      className={`fixed left-0 top-0 h-full bg-gray-900/95 backdrop-blur-xl border-r border-gray-700 shadow-2xl z-50 transform transition-transform duration-300 flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full'
+      className={`fixed left-0 top-0 h-full bg-surface border-r border-line shadow-2xl z-[60] transform transition-transform duration-300 flex flex-col ${isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       style={{
         width: window.innerWidth < 768 ? '100%' : `${width}px`,
@@ -93,51 +93,51 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       {/* Resize Handle */}
       <div
         onMouseDown={startResizing}
-        className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500/50 transition-colors z-[60] hidden md:block"
+        className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-accent transition-colors z-[60] hidden md:block"
       />
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-gray-700 bg-gray-900/50">
+      <div className="flex items-center justify-between p-6 border-b border-line bg-surface2">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-purple-600/20 rounded-lg">
-            <MessageSquare className="w-5 h-5 text-purple-400" />
+          <div className="p-2 bg-accent-soft rounded-lg">
+            <MessageSquare className="w-5 h-5 text-fg" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Architecture Q&A</h2>
-            <p className="text-xs text-gray-400">Ask about the design</p>
+            <h2 className="text-lg font-bold text-fg">Architecture Q&A</h2>
+            <p className="text-xs text-muted">Ask about the design</p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="p-2 hover:bg-gray-800 rounded-full transition-colors"
+          className="p-2 hover:bg-surface2 rounded-full transition-colors"
         >
-          <X className="w-5 h-5 text-gray-400" />
+          <X className="w-5 h-5 text-muted" />
         </button>
       </div>
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {!hasArchitecture ? (
-          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 px-6">
+          <div className="flex flex-col items-center justify-center h-full text-center text-muted px-6">
             <Bot className="w-12 h-12 mb-3 opacity-30" />
             <p className="text-sm">Generate an architecture first to start asking questions.</p>
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 px-6 space-y-6">
-            <div className="p-4 bg-gray-800/50 rounded-full">
-              <Bot className="w-8 h-8 text-purple-400 opacity-80" />
+          <div className="flex flex-col items-center justify-center h-full text-center text-muted px-6 space-y-6">
+            <div className="p-4 bg-surface2 rounded-full">
+              <Bot className="w-8 h-8 text-fg opacity-80" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-300 mb-2">How can I help you?</p>
-              <p className="text-xs text-gray-500">Ask about data flow, component choices, or scalability.</p>
+              <p className="text-sm font-medium text-fg mb-2">How can I help you?</p>
+              <p className="text-xs text-muted">Ask about data flow, component choices, or scalability.</p>
             </div>
             <div className="grid grid-cols-1 gap-2 w-full">
-              <button onClick={() => onSendMessage("Explain the data flow")} className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 py-2 px-3 rounded-lg transition-colors text-left">
+              <button onClick={() => onSendMessage("Explain the data flow")} className="text-xs bg-surface2 hover:bg-line border border-line py-2 px-3 rounded-lg transition-colors text-left">
                 "Explain the data flow"
               </button>
-              <button onClick={() => onSendMessage("What technologies should I use?")} className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 py-2 px-3 rounded-lg transition-colors text-left">
+              <button onClick={() => onSendMessage("What technologies should I use?")} className="text-xs bg-surface2 hover:bg-line border border-line py-2 px-3 rounded-lg transition-colors text-left">
                 "What technologies should I use?"
               </button>
-              <button onClick={() => onSendMessage("Add a Redis cache")} className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 py-2 px-3 rounded-lg transition-colors text-left">
+              <button onClick={() => onSendMessage("Add a Redis cache")} className="text-xs bg-surface2 hover:bg-line border border-line py-2 px-3 rounded-lg transition-colors text-left">
                 "Add a Redis cache"
               </button>
             </div>
@@ -149,21 +149,21 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
               className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               {msg.role === 'ai' && (
-                <div className="w-8 h-8 rounded-full bg-purple-600/20 flex items-center justify-center flex-shrink-0 mt-1">
-                  <Bot className="w-4 h-4 text-purple-400" />
+                <div className="w-8 h-8 rounded-full bg-accent-soft flex items-center justify-center flex-shrink-0 mt-1">
+                  <Bot className="w-4 h-4 text-fg" />
                 </div>
               )}
 
               <div
                 className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed ${msg.role === 'user'
-                  ? 'bg-blue-600 text-white rounded-br-none'
-                  : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-bl-none'
+                  ? 'bg-fg text-app rounded-br-none'
+                  : 'bg-surface2 text-fg border border-line rounded-bl-none'
                   }`}
               >
                 {msg.role === 'user' ? (
                   msg.content
                 ) : (
-                  <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900/50 prose-pre:border prose-pre:border-gray-700">
+                  <div className="prose dark:prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-surface2 prose-pre:border prose-pre:border-line">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {msg.content}
                     </ReactMarkdown>
@@ -172,8 +172,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
               </div>
 
               {msg.role === 'user' && (
-                <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center flex-shrink-0 mt-1">
-                  <User className="w-4 h-4 text-blue-400" />
+                <div className="w-8 h-8 rounded-full bg-accent-soft flex items-center justify-center flex-shrink-0 mt-1">
+                  <User className="w-4 h-4 text-fg" />
                 </div>
               )}
             </div>
@@ -182,14 +182,14 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
         {isTyping && (
           <div className="flex gap-3 justify-start">
-            <div className="w-8 h-8 rounded-full bg-purple-600/20 flex items-center justify-center flex-shrink-0 mt-1">
-              <Bot className="w-4 h-4 text-purple-400" />
+            <div className="w-8 h-8 rounded-full bg-accent-soft flex items-center justify-center flex-shrink-0 mt-1">
+              <Bot className="w-4 h-4 text-fg" />
             </div>
-            <div className="bg-gray-800 border border-gray-700 p-3 rounded-2xl rounded-bl-none">
+            <div className="bg-surface2 border border-line p-3 rounded-2xl rounded-bl-none">
               <div className="flex gap-1">
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="w-2 h-2 bg-muted rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-muted rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-muted rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
@@ -198,7 +198,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* Input Area */}
-      <div className="p-4 border-t border-gray-700 bg-gray-900/50">
+      <div className="p-4 border-t border-line bg-surface2">
         <form onSubmit={handleSubmit} className="relative">
           <input
             ref={inputRef}
@@ -207,12 +207,12 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             onChange={(e) => setInput(e.target.value)}
             disabled={isTyping || !hasArchitecture}
             placeholder={hasArchitecture ? "Ask a question..." : "Generate architecture first"}
-            className="w-full bg-gray-800 text-white placeholder-gray-500 border border-gray-700 rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-surface2 text-fg placeholder-muted border border-line rounded-xl pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <button
             type="submit"
             disabled={!input.trim() || isTyping || !hasArchitecture}
-            className="absolute right-2 top-2 p-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-white rounded-lg transition-colors"
+            className="absolute right-2 top-2 p-1.5 bg-fg text-app disabled:opacity-40 rounded-lg transition-colors"
           >
             <Send className="w-4 h-4" />
           </button>
